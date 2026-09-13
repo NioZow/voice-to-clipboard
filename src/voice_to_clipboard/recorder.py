@@ -128,7 +128,7 @@ def start_background_recorder() -> int:
     """Launch a detached recorder and record its PID."""
     audio_path().unlink(missing_ok=True)
     proc = subprocess.Popen(
-        [sys.executable, "-m", "voice_to_clipboard", "--record-bg"],
+        [os.path.abspath(sys.argv[0]), "--record-bg"],
         start_new_session=True,
     )
     pid_file_path().write_text(str(proc.pid))

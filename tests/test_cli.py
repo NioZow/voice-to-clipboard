@@ -10,6 +10,7 @@ def test_parser_defaults():
     assert args.prompt is None
     assert args.debug is False
     assert args.stdout is False
+    assert args.no_notify is False
 
 
 def test_parser_options():
@@ -26,3 +27,8 @@ def test_parser_options():
 def test_parser_stdout():
     assert cli.build_parser().parse_args([]).stdout is False
     assert cli.build_parser().parse_args(["--stdout"]).stdout is True
+
+
+def test_parser_no_notify():
+    assert cli.build_parser().parse_args([]).no_notify is False
+    assert cli.build_parser().parse_args(["--no-notify"]).no_notify is True

@@ -60,6 +60,7 @@ voice-to-clipboard [options]
   --no-punct        Disable automatic punctuation/casing (off by default)
   --llm-fix         Enable tiny-LLM homophone/grammar fix (off by default)
   --stdout          Print the transcription to stdout instead of the clipboard
+  --no-notify       Disable desktop notifications for recording start/stop
   --lang CODE       Force transcription language (default: auto), e.g. en, fr
   --prompt TEXT     Initial prompt for vocabulary bias
   --debug           Verbose logging and raw/final output
@@ -70,7 +71,8 @@ voice-to-clipboard [options]
 them. `--llm-fix` is **off by default**; pass it to enable (it requires the `llm` extra
 and is incompatible with `--no-punct`). By default the result is copied to the clipboard
 and a desktop notification is shown; pass `--stdout` to print the text to stdout instead
-(no clipboard copy, no notification).
+(no clipboard copy, no notification). Notifications fire on recording start and stop;
+pass `--no-notify` to silence them.
 
 **Flow:** `Hotkey` → `Record` → `faster-whisper` → `Punctuation` → (`LLM fix`?) →
 (`Clipboard` + `Notification`) or `stdout`.

@@ -44,12 +44,13 @@ def copy_to_clipboard(text: str) -> None:
 def notify(message: str) -> None:
     _, (notify_bin, template) = _platform_commands()[1]
     if not shutil.which(notify_bin):
+        logger.warning("Notification command %r not found; skipping notification", notify_bin)
         return
     args = [part.format(message) for part in template]
     try:
         subprocess.run([notify_bin, *args], check=False)
-    except OSError:
-        pass
+    except OSError as exc:
+        logger.warning("Could not send notification: %s", exc)
 
 
 def transcribe_file(
@@ -59,6 +60,7 @@ def transcribe_file(
     no_punct: bool = False,
     llm_fix: bool = False,
     stdout: bool = False,
+    no_notify: bool = False,
 ) -> tuple[str, str]:
     """Transcribe + normalize ``audio_path``; return ``(raw_text, final_text)``."""
     raw_text, detected_lang, _prob = stt.transcribe(
@@ -79,7 +81,8 @@ def transcribe_file(
         return raw_text, final_text
 
     copy_to_clipboard(final_text)
-    notify("Transcribed!")
+    if not no_notify:
+        notify("Transcribed!")
     return raw_text, final_text
 
 
@@ -90,6 +93,7 @@ def run_pipeline(
     no_punct: bool = False,
     llm_fix: bool = False,
     stdout: bool = False,
+    no_notify: bool = False,
 ) -> tuple[str, str]:
     """Process a recorded file; convenience wrapper over ``transcribe_file``."""
     return transcribe_file(
@@ -99,4 +103,5 @@ def run_pipeline(
         no_punct=no_punct,
         llm_fix=llm_fix,
         stdout=stdout,
+        no_notify=no_notify,
     )

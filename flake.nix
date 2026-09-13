@@ -33,6 +33,12 @@
         # Prebuilt wheel: no build/compile step.
         dontBuild = true;
         doCheck = false;
+        # transformers >=5 removed the `grouped_entities` kwarg from the `ner`
+        # pipeline. Drop it so the wheel works with modern transformers.
+        postInstall = ''
+          sed -i 's/, grouped_entities=False//g' \
+            "$out/lib/python3.13/site-packages/deepmultilingualpunctuation/punctuationmodel.py"
+        '';
       };
     in {
       inherit deepmultilingualpunctuation;
@@ -48,7 +54,7 @@
           pythonRelaxDepsHook
         ];
 
-        # These come pinned on PyPI; relax so pip/nix can resolve.
+# These come pinned on PyPI; relax so pip/nix can resolve.
         pythonRelaxDeps = [
           "torch"
           "transformers"

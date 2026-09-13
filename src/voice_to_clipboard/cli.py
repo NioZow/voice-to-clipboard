@@ -44,6 +44,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print the transcription to stdout instead of copying it to the clipboard.",
     )
     parser.add_argument(
+        "--no-notify",
+        action="store_true",
+        help="Disable desktop notifications for recording start/stop.",
+    )
+    parser.add_argument(
         "--lang",
         default=None,
         metavar="CODE",
@@ -105,7 +110,8 @@ def main(argv: list[str] | None = None) -> int:
 
     logger.info("Toggle start requested")
     recorder.start_background_recorder()
-    pipeline.notify("Recording...")
+    if not args.no_notify:
+        pipeline.notify("Recording...")
     return 0
 
 
@@ -118,6 +124,7 @@ def _process(path, args) -> None:
             no_punct=args.no_punct,
             llm_fix=args.llm_fix,
             stdout=args.stdout,
+            no_notify=args.no_notify,
         )
     except Exception as exc:  # noqa: BLE001 - surface any pipeline error
         logger.error("Pipeline failed: %s", exc)
