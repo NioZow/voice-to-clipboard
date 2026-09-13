@@ -54,7 +54,7 @@
           pythonRelaxDepsHook
         ];
 
-# These come pinned on PyPI; relax so pip/nix can resolve.
+        # These come pinned on PyPI; relax so pip/nix can resolve.
         pythonRelaxDeps = [
           "torch"
           "transformers"
@@ -74,8 +74,9 @@
 
         # sounddevice needs PortAudio at runtime; clipboard + notify on Linux.
         # macOS uses the system `pbcopy`/`osascript`, so no extra inputs there.
-        buildInputs = [final.portaudio]
-        ++ final.lib.optionals final.stdenv.isLinux [final.wl-clipboard final.dunst];
+        buildInputs =
+          [final.portaudio]
+          ++ final.lib.optionals final.stdenv.isLinux [final.wl-clipboard final.dunst];
 
         meta = with final.lib; {
           description = "Local voice transcription to clipboard";
@@ -100,19 +101,23 @@
 
         devShells.default = pkgs.mkShell {
           name = "voice-to-clipboard";
-          packages = [
-            pkgs.uv
-            pkgs.python3
-            pkgs.portaudio
-          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
-            pkgs.wl-clipboard
-            pkgs.dunst
-          ];
+          packages =
+            [
+              pkgs.uv
+              pkgs.python3
+              pkgs.portaudio
+            ]
+            ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+              pkgs.wl-clipboard
+              pkgs.dunst
+            ];
           shellHook = ''
-            # Bootstrap a uv venv (contaibox pattern) if missing.
+            export name="voice-to-clipboard"
+
             if [[ ! -d .venv ]]; then
               uv venv
             fi
+
             source .venv/bin/activate
             uv pip install -e ".[dev]"
           '';
