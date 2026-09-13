@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "voice-to-clipboard"
+version = "0.2.0"
+description = "Local voice transcription to clipboard using faster-whisper, punctuation, and optional tiny LLM fix"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "faster-whisper",
+    "deepmultilingualpunctuation",
+    "sounddevice",
+    "numpy",
+    "huggingface-hub",
+    "transformers>=4.40,<5",
+]
+
+[project.optional-dependencies]
+llm = ["llama-cpp-python"]
+dev = [
+    "pytest",
+]
+
+[project.scripts]
+voice-to-clipboard = "voice_to_clipboard.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/voice_to_clipboard"]

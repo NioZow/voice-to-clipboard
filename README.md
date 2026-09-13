@@ -1,78 +1,76 @@
 # Voice To Clipboard
 
-A local, high-performance voice transcription tool that captures audio, transcribes it via Whisper, normalizes it using a local LLM, and copies the result to the system clipboard.
+A self-contained, local voice-to-clipboard tool. Press a hotkey, speak, press the
+hotkey again — the transcribed, punctuated text lands on your clipboard. No server,
+no cloud, no Ollama. Models are auto-downloaded on first run; there is nothing to do.
 
 ## Features
 
-- **Local STT**: Uses `whisper-cpp` for near-instant transcription.
-- **Technical Normalization**: Uses `Ollama` (Llama 3.2) to fix software engineering homophones.
-- **Least Privilege**: Runs entirely on the host; no container access required.
-- **Cross-Platform**: Native support for NixOS (Wayland/Dunst) and macOS.
-
-## Prerequisites
-
-1. **Whisper Model**: Download the turbo model to `~/.local/share/whisper-cpp/`:
-
-```sh
-mkdir -p ~/.local/share/whisper-cpp
-curl -L -o ~/.local/share/whisper-cpp/ggml-large-v3-turbo-q5_0.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin
-```
-
-2. **Ollama**: Ensure Ollama is running with `llama3.2:1b` pulled:
-
-```sh
-ollama pull llama3.2:1b
-```
+- **Local STT**: `faster-whisper` (`large-v3-turbo`), auto-downloaded to
+  `~/.cache/huggingface` on first run.
+- **Punctuation & casing**: `deepmultilingualpunctuation` (EN + FR), **on by default**.
+- **Optional tiny LLM fix** (`--llm-fix`): an in-process `Qwen2.5-0.5B-Instruct`
+  GGUF lightly fixes homophones/grammar. Requires the `llm` extra.
+- **Cross-platform**: Wayland/Dunst on Linux, `pbcopy`/`osascript` on macOS.
+- **Toggle or foreground**: bind to a hotkey for start/stop, or run in the
+  foreground and press `Ctrl+C`.
 
 ## Installation
 
-### Nix Flake (recommended)
+### uv (recommended for development)
 
-Add this repo as a flake input:
-
-```nix
-{
-  inputs.voice-to-clipboard.url = "github:niozow/voice-to-clipboard";
-
-  # Example: home-manager
-  outputs = { self, nixpkgs, home-manager, voice-to-clipboard, ... }:
-    let
-      system = "x86_64-linux"; # or aarch64-linux, aarch64-darwin, x86_64-darwin
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [ voice-to-clipboard.overlays.default ];
-      };
-    in {
-      homeConfigurations.user = home-manager.lib.homeManagerConfiguration {
-        inherit pkgs;
-        modules = [{
-          home.packages = [ pkgs.voice-to-clipboard ];
-        }];
-      };
-    };
-}
+```sh
+uv venv
+uv pip install -e ".[dev]"        # core
+uv pip install -e ".[llm]"        # optional --llm-fix support
 ```
 
-After rebuilding, `voice-to-clipboard` is available in your `PATH`.
+### Nix flake
 
-### Manual
+```sh
+nix build                       # build the package
+nix develop                     # dev shell (uv venv bootstrap)
+```
 
-Clone the repo and run `scripts/record.sh` directly. Ensure `sox`, `whisper-cli`, `ollama`, and `python3` are in your `PATH` (plus `wl-copy` on Linux or `pbcopy` on macOS).
+You can also consume it as a flake input via `overlays.default` and add
+`pkgs.voice-to-clipboard` to your `home.packages`.
 
 ## Usage
 
-Bind `voice-to-clipboard` to a key in your window manager or desktop environment. The script works as a **toggle**:
+### Toggle (hotkey-friendly)
+
+Bind `voice-to-clipboard` to a key in your window manager or desktop environment:
 
 - **First press**: starts recording.
-- **Second press**: stops recording, transcribes, normalizes, and copies the result to the clipboard.
+- **Second press**: stops recording, transcribes, punctuates, and copies the result
+  to the clipboard.
 
-You can also run it in attached/foreground mode:
+### Foreground mode
 
 ```sh
-voice-to-clipboard --attached   # press Ctrl+C to stop and transcribe
+voice-to-clipboard --transcribe   # record until Ctrl+C, then process
 ```
 
-**Flow:**
-`Keybind` → `sox Record` → `Whisper Transcribe` → `Ollama Normalize` → `Clipboard` → `Notification`.
+### Options
+
+```text
+voice-to-clipboard [options]
+
+  --transcribe      Foreground mode: record until Ctrl+C, then transcribe
+  --no-punct        Disable automatic punctuation/casing (default: on)
+  --llm-fix         Enable tiny-LLM homophone/grammar fix (default: off)
+  --lang CODE       Force transcription language (default: auto), e.g. en, fr
+  --prompt TEXT     Initial prompt for vocabulary bias
+  --debug           Verbose logging and raw/final output
+  --help            Show this message
+```
+
+**Flow:** `Hotkey` → `Record` → `faster-whisper` → `Punctuation` → (`LLM fix`?) →
+`Clipboard` → `Notification`.
 
 Simply press `Ctrl+V` (or `Cmd+V`) to paste your transcribed text.
+
+## Environment variables
+
+- `VOICE_STT_MODEL` — override the Whisper model (default `large-v3-turbo`), e.g.
+  `small` for low-resource machines. Models are auto-downloaded on first use.

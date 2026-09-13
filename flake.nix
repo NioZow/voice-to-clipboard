@@ -12,52 +12,34 @@
     flake-utils,
   }: let
     overlay = final: prev: {
-      voice-to-clipboard = final.callPackage (
-        {
-          stdenv,
-          lib,
-          makeWrapper,
-          sox,
-          whisper-cpp,
-          ollama,
-          python3,
-          wl-clipboard,
-          dunst,
-        }:
-          stdenv.mkDerivation (finalAttrs: {
-            pname = "voice-to-clipboard";
-            version = "0.1.0";
-            src = ./.;
+      voice-to-clipboard = final.python3.pkgs.buildPythonApplication {
+        pname = "voice-to-clipboard";
+        version = "0.2.0";
+        src = self;
+        format = "pyproject";
 
-            nativeBuildInputs = [makeWrapper];
+        nativeBuildInputs = with final.python3.pkgs; [
+          hatchling
+          pythonRelaxDepsHook
+        ];
 
-            buildInputs =
-              [sox whisper-cpp ollama python3]
-              ++ lib.optional stdenv.isLinux wl-clipboard
-              ++ lib.optional stdenv.isLinux dunst;
+        # These come pinned on PyPI; relax so pip can resolve.
+        pythonRelaxDeps = [
+          "torch"
+          "transformers"
+        ];
 
-            installPhase = ''
-              mkdir -p $out/bin $out/share/voice-to-clipboard
+        # sounddevice needs PortAudio at runtime; clipboard + notify on Linux.
+        # macOS uses the system `pbcopy`/`osascript`, so no extra inputs there.
+        buildInputs = [final.portaudio]
+        ++ final.lib.optionals final.stdenv.isLinux [final.wl-clipboard final.dunst];
 
-              cp scripts/normalize.py $out/share/voice-to-clipboard/normalize.py
-              cp scripts/record.sh $out/bin/voice-to-clipboard
-              chmod +x $out/bin/voice-to-clipboard
-
-              substituteInPlace $out/bin/voice-to-clipboard \
-                --replace-fail 'local normalizer="$script_dir/normalize.py"' \
-                "local normalizer=\"$out/share/voice-to-clipboard/normalize.py\""
-
-              wrapProgram $out/bin/voice-to-clipboard \
-                --prefix PATH : ${lib.makeBinPath finalAttrs.buildInputs}
-            '';
-
-            meta = with lib; {
-              description = "Local voice transcription to clipboard";
-              license = licenses.mit;
-              platforms = platforms.unix;
-            };
-          })
-      ) {};
+        meta = with final.lib; {
+          description = "Local voice transcription to clipboard";
+          license = licenses.mit;
+          platforms = platforms.unix;
+        };
+      };
     };
   in
     flake-utils.lib.eachDefaultSystem (
@@ -71,6 +53,26 @@
         apps.default = {
           type = "app";
           program = "${pkgs.voice-to-clipboard}/bin/voice-to-clipboard";
+        };
+
+        devShells.default = pkgs.mkShell {
+          name = "voice-to-clipboard";
+          packages = [
+            pkgs.uv
+            pkgs.python3
+            pkgs.portaudio
+          ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+            pkgs.wl-clipboard
+            pkgs.dunst
+          ];
+          shellHook = ''
+            # Bootstrap a uv venv (contaibox pattern) if missing.
+            if [[ ! -d .venv ]]; then
+              uv venv
+            fi
+            source .venv/bin/activate
+            uv pip install -e ".[dev]"
+          '';
         };
       }
     )
