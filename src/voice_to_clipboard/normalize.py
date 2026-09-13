@@ -8,6 +8,7 @@ Punctuation uses ``deepmultilingualpunctuation`` (EN+FR). The optional
 from __future__ import annotations
 
 import logging
+import os
 from functools import lru_cache
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,17 @@ logger = logging.getLogger(__name__)
 PUNCT_MODEL_NAME = "oliverguhr/fullstop-punctuation-multilingual-sonar-base"
 LLM_REPO = "Qwen/Qwen2.5-0.5B-Instruct-GGUF"
 LLM_FILENAME = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+
+
+def _enable_offline_if_cached(repo_id: str) -> None:
+    """Set ``HF_HUB_OFFLINE=1`` when ``repo_id`` is already in the local cache."""
+    from huggingface_hub.constants import HF_HUB_CACHE
+    from pathlib import Path
+
+    cache_dir = Path(HF_HUB_CACHE) / f"models--{repo_id.replace('/', '--')}"
+    snapshots = cache_dir / "snapshots"
+    if snapshots.is_dir() and any(snapshots.iterdir()):
+        os.environ["HF_HUB_OFFLINE"] = "1"
 
 _LLM_FIX_SYSTEM = (
     "You are a careful transcription editor. Fix obvious speech-to-text errors, "
@@ -27,6 +39,7 @@ _LLM_FIX_SYSTEM = (
 def _get_punct_model():
     from deepmultilingualpunctuation import PunctuationModel
 
+    _enable_offline_if_cached(PUNCT_MODEL_NAME)
     logger.info("Loading punctuation model %s...", PUNCT_MODEL_NAME)
     return PunctuationModel(model=PUNCT_MODEL_NAME)
 

@@ -14,6 +14,8 @@ import os
 from typing import Any
 
 from faster_whisper import WhisperModel
+from huggingface_hub.constants import HF_HUB_CACHE
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +24,35 @@ MODEL_NAME = "large-v3-turbo"
 _model: WhisperModel | None = None
 
 
+def _resolve_repo(name: str) -> str:
+    """Resolve a bare Whisper size name to the full HuggingFace repo id."""
+    from faster_whisper.utils import _MODELS
+
+    return _MODELS.get(name, name)
+
+
+def _is_cached(model_name: str) -> bool:
+    """Return True if ``model_name`` already has a snapshot in the local HF cache."""
+    cache_dir = Path(HF_HUB_CACHE) / f"models--{model_name.replace('/', '--')}"
+    snapshots = cache_dir / "snapshots"
+    return snapshots.is_dir() and any(snapshots.iterdir())
+
+
 def get_model(device: str = "auto", compute_type: str = "default") -> WhisperModel:
     """Load (and cache) the Whisper model, honoring ``VOICE_STT_MODEL``."""
     global _model
     if _model is None:
         name = os.environ.get("VOICE_STT_MODEL", MODEL_NAME)
-        logger.info("Loading %s (first run downloads the model)...", name)
-        _model = WhisperModel(name, device=device, compute_type=compute_type)
+        local_files_only = _is_cached(_resolve_repo(name))
+        logger.info(
+            "Loading %s%s...", name, " (from local cache)" if local_files_only else " (first run downloads the model)"
+        )
+        _model = WhisperModel(
+            name,
+            device=device,
+            compute_type=compute_type,
+            local_files_only=local_files_only,
+        )
     return _model
 
 

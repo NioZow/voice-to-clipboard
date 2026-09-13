@@ -42,7 +42,7 @@ def copy_to_clipboard(text: str) -> None:
 
 
 def notify(message: str) -> None:
-    _, (notify_bin, template) = _platform_commands()[1]
+    notify_bin, template = _platform_commands()[1]
     if not shutil.which(notify_bin):
         logger.warning("Notification command %r not found; skipping notification", notify_bin)
         return

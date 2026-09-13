@@ -83,3 +83,16 @@ Simply press `Ctrl+V` (or `Cmd+V`) to paste your transcribed text.
 
 - `VOICE_STT_MODEL` — override the Whisper model (default `large-v3-turbo`), e.g.
   `small` for low-resource machines. Models are auto-downloaded on first use.
+
+## Offline model caching
+
+Models are auto-downloaded to `~/.cache/huggingface` on first use. On subsequent
+runs the tool detects the local cache and loads **fully offline** (no network
+requests). Set `HF_HUB_OFFLINE=1` to force offline mode explicitly.
+
+## Notes
+
+- **Benign "UNEXPECTED" warning**: when loading the punctuation model, transformers
+  prints a load report mentioning `roberta.embeddings.position_ids ... UNEXPECTED`.
+  This is a harmless buffer mismatch (not an actual missing weight) and can be
+  ignored.
