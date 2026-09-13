@@ -11,22 +11,59 @@
     nixpkgs,
     flake-utils,
   }: let
-    overlay = final: prev: {
-      voice-to-clipboard = final.python3.pkgs.buildPythonApplication {
+    overlay = final: prev: let
+      python = final.python3;
+
+      # `deepmultilingualpunctuation` is not packaged in nixpkgs, so vendor it
+      # from its pure-Python PyPI wheel (buildPythonPackage pattern from
+      # chutes-litellm-proxy).  It only declares `torch` and `transformers`, both
+      # of which ship as prebuilt binaries in the nixpkgs cache.
+      deepmultilingualpunctuation = python.pkgs.buildPythonPackage {
+        pname = "deepmultilingualpunctuation";
+        version = "1.0.1";
+        format = "wheel";
+        src = final.fetchurl {
+          url = "https://files.pythonhosted.org/packages/dc/a7/505f531c23aa2c381b597c9e59a62c20d9e6294f32ad7d06e4eaa2f3d438/deepmultilingualpunctuation-1.0.1-py3-none-any.whl";
+          hash = "sha256-80Y3itvs3O+ExjphRn91XXU4VVnQJg9gvvQxW1+zpU8=";
+        };
+        propagatedBuildInputs = with python.pkgs; [
+          torch
+          transformers
+        ];
+        # Prebuilt wheel: no build/compile step.
+        dontBuild = true;
+        doCheck = false;
+      };
+    in {
+      inherit deepmultilingualpunctuation;
+
+      voice-to-clipboard = python.pkgs.buildPythonApplication {
         pname = "voice-to-clipboard";
         version = "0.2.0";
         src = self;
         format = "pyproject";
 
-        nativeBuildInputs = with final.python3.pkgs; [
+        nativeBuildInputs = with python.pkgs; [
           hatchling
           pythonRelaxDepsHook
         ];
 
-        # These come pinned on PyPI; relax so pip can resolve.
+        # These come pinned on PyPI; relax so pip/nix can resolve.
         pythonRelaxDeps = [
           "torch"
           "transformers"
+        ];
+
+        # All runtime dependencies from pyproject.toml, plus the vendored
+        # deepmultilingualpunctuation.  Without these the wheel's METADATA lists
+        # them as missing and pythonRuntimeDepsCheckHook fails the build.
+        propagatedBuildInputs = with python.pkgs; [
+          faster-whisper
+          deepmultilingualpunctuation
+          sounddevice
+          numpy
+          huggingface-hub
+          transformers
         ];
 
         # sounddevice needs PortAudio at runtime; clipboard + notify on Linux.
