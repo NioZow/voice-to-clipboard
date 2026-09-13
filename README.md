@@ -11,7 +11,7 @@ no cloud, no Ollama. Models are auto-downloaded on first run; there is nothing t
 - **Punctuation & casing**: `deepmultilingualpunctuation` (EN + FR), **on by default**.
 - **Optional tiny LLM fix** (`--llm-fix`): an in-process `Qwen2.5-0.5B-Instruct`
   GGUF lightly fixes homophones/grammar. Requires the `llm` extra.
-- **Cross-platform**: Wayland/Dunst on Linux, `pbcopy`/`osascript` on macOS.
+- **Cross-platform**: `wl-copy`/`notify-send` on Linux, `pbcopy`/`osascript` on macOS.
 - **Toggle or foreground**: bind to a hotkey for start/stop, or run in the
   foreground and press `Ctrl+C`.
 
@@ -57,16 +57,23 @@ voice-to-clipboard --transcribe   # record until Ctrl+C, then process
 voice-to-clipboard [options]
 
   --transcribe      Foreground mode: record until Ctrl+C, then transcribe
-  --no-punct        Disable automatic punctuation/casing (default: on)
-  --llm-fix         Enable tiny-LLM homophone/grammar fix (default: off)
+  --no-punct        Disable automatic punctuation/casing (off by default)
+  --llm-fix         Enable tiny-LLM homophone/grammar fix (off by default)
+  --stdout          Print the transcription to stdout instead of the clipboard
   --lang CODE       Force transcription language (default: auto), e.g. en, fr
   --prompt TEXT     Initial prompt for vocabulary bias
   --debug           Verbose logging and raw/final output
   --help            Show this message
 ```
 
+**Defaults:** Punctuation & casing are **on by default**; pass `--no-punct` to disable
+them. `--llm-fix` is **off by default**; pass it to enable (it requires the `llm` extra
+and is incompatible with `--no-punct`). By default the result is copied to the clipboard
+and a desktop notification is shown; pass `--stdout` to print the text to stdout instead
+(no clipboard copy, no notification).
+
 **Flow:** `Hotkey` → `Record` → `faster-whisper` → `Punctuation` → (`LLM fix`?) →
-`Clipboard` → `Notification`.
+(`Clipboard` + `Notification`) or `stdout`.
 
 Simply press `Ctrl+V` (or `Cmd+V`) to paste your transcribed text.
 

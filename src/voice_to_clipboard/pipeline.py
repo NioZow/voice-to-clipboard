@@ -23,7 +23,7 @@ def _platform_commands() -> tuple[str, list[str]]:
         )
     else:
         clip = ("wl-copy", [])
-        notify = ("dunstify", ["Voice STT", "{}"])
+        notify = ("notify-send", ["Voice STT", "{}"])
     return clip, notify
 
 
@@ -58,6 +58,7 @@ def transcribe_file(
     prompt: str | None = None,
     no_punct: bool = False,
     llm_fix: bool = False,
+    stdout: bool = False,
 ) -> tuple[str, str]:
     """Transcribe + normalize ``audio_path``; return ``(raw_text, final_text)``."""
     raw_text, detected_lang, _prob = stt.transcribe(
@@ -74,6 +75,9 @@ def transcribe_file(
                 raise ValueError("--llm-fix is incompatible with --no-punct")
             final_text = normalize.llm_fix(final_text)
 
+    if stdout:
+        return raw_text, final_text
+
     copy_to_clipboard(final_text)
     notify("Transcribed!")
     return raw_text, final_text
@@ -85,6 +89,14 @@ def run_pipeline(
     prompt: str | None = None,
     no_punct: bool = False,
     llm_fix: bool = False,
+    stdout: bool = False,
 ) -> tuple[str, str]:
     """Process a recorded file; convenience wrapper over ``transcribe_file``."""
-    return transcribe_file(audio_path, lang=lang, prompt=prompt, no_punct=no_punct, llm_fix=llm_fix)
+    return transcribe_file(
+        audio_path,
+        lang=lang,
+        prompt=prompt,
+        no_punct=no_punct,
+        llm_fix=llm_fix,
+        stdout=stdout,
+    )

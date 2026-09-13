@@ -9,6 +9,7 @@ def test_parser_defaults():
     assert args.lang is None
     assert args.prompt is None
     assert args.debug is False
+    assert args.stdout is False
 
 
 def test_parser_options():
@@ -20,3 +21,8 @@ def test_parser_options():
     assert args.lang == "fr"
     assert args.prompt == "hello"
     assert args.debug is True
+
+
+def test_parser_stdout():
+    assert cli.build_parser().parse_args([]).stdout is False
+    assert cli.build_parser().parse_args(["--stdout"]).stdout is True

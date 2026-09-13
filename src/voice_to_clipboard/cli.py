@@ -29,13 +29,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--no-punct",
         action="store_true",
-        help="Disable automatic punctuation/casing (default: on).",
+        help="Disable automatic punctuation/casing. "
+        "Punctuation is on by default; pass --no-punct to turn it off.",
     )
     parser.add_argument(
         "--llm-fix",
         action="store_true",
-        help="Enable tiny-LLM homophone/grammar fix (default: off). "
-        "Incompatible with --no-punct. Requires the 'llm' extra.",
+        help="Enable tiny-LLM homophone/grammar fix. "
+        "Off by default; requires the 'llm' extra and is incompatible with --no-punct.",
+    )
+    parser.add_argument(
+        "--stdout",
+        action="store_true",
+        help="Print the transcription to stdout instead of copying it to the clipboard.",
     )
     parser.add_argument(
         "--lang",
@@ -111,11 +117,16 @@ def _process(path, args) -> None:
             prompt=args.prompt,
             no_punct=args.no_punct,
             llm_fix=args.llm_fix,
+            stdout=args.stdout,
         )
     except Exception as exc:  # noqa: BLE001 - surface any pipeline error
         logger.error("Pipeline failed: %s", exc)
         if args.debug:
             logger.exception(exc)
+        return
+
+    if args.stdout:
+        print(final)
         return
 
     if args.debug:
