@@ -14,6 +14,10 @@ no cloud, no Ollama. Models are auto-downloaded on first run; there is nothing t
 - **Cross-platform**: `wl-copy`/`notify-send` on Linux, `pbcopy`/`osascript` on macOS.
 - **Toggle or foreground**: bind to a hotkey for start/stop, or run in the
   foreground and press `Ctrl+C`.
+- **Single instance**: a POSIX file lock guarantees only one recorder runs at a
+  time. A duplicate start (e.g. a fast double key press) is ignored instead of
+  launching a second recorder, and a crashed recorder releases the lock
+  automatically.
 
 ## Installation
 

@@ -92,24 +92,42 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.record_bg:
-        # Hidden background recorder: write audio, terminate on SIGTERM.
+        # Hidden background recorder: it inherited the single-instance lease
+        # from the parent toggle invocation, so it just records until SIGTERM.
         path = recorder.record_until_signal(recorder.audio_path())
         logger.debug("Background recording finished -> %s", path)
         return 0
 
     if args.transcribe:
-        path = recorder.record_until_signal(recorder.audio_path(), signals=(signal.SIGINT,))
+        lock = recorder.acquire_recording_lock()
+        if lock is None:
+            logger.error("A recorder is already running; refusing to start a second one")
+            return 2
+        recorder.clear_recording_state(lock)
+        try:
+            path = recorder.record_until_signal(
+                recorder.audio_path(), signals=(signal.SIGINT,)
+            )
+        finally:
+            recorder.release_recording_lock(lock)
         _process(path, args)
         return 0
 
     if recorder.is_recording():
         logger.info("Toggle stop requested")
-        recorder.stop_background_recorder()
+        pid = recorder.stop_background_recorder()
+        if pid is None:
+            logger.info("Recorder is still starting or running in the foreground; nothing to stop")
+            return 0
         _process(recorder.audio_path(), args)
         return 0
 
     logger.info("Toggle start requested")
-    recorder.start_background_recorder()
+    try:
+        recorder.start_background_recorder()
+    except recorder.AlreadyRecordingError:
+        logger.info("A recorder is already starting; ignoring duplicate start")
+        return 0
     if not args.no_notify:
         pipeline.notify("Recording...")
     return 0
