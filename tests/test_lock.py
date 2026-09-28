@@ -1,5 +1,6 @@
 import os
 import signal
+import subprocess
 
 import pytest
 
@@ -76,6 +77,29 @@ def test_start_hands_off_lock_and_blocks_duplicate(monkeypatch):
     assert recorder.is_recording() is False
     assert recorder.start_background_recorder() == 4242
     holder["proc"].close()
+
+
+def test_start_detaches_child_stdio(monkeypatch):
+    captured = {}
+
+    def fake_popen(*args, **kwargs):
+        captured.update(kwargs)
+        proc = _FakeProc(*args, **kwargs)
+        holder.append(proc)
+        return proc
+
+    holder = []
+    monkeypatch.setattr(recorder.subprocess, "Popen", fake_popen)
+
+    recorder.start_background_recorder()
+    # A detached recorder must not inherit the caller's stdout: a caller that
+    # reads it to EOF (hs.execute / io.popen) would otherwise block until the
+    # recorder exits.
+    assert captured["stdin"] == subprocess.DEVNULL
+    assert captured["stdout"] == subprocess.DEVNULL
+    assert captured["stderr"] == subprocess.DEVNULL
+
+    holder[0].close()
 
 
 def test_stop_reads_state_and_signals(monkeypatch):

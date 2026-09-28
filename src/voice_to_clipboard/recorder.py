@@ -244,6 +244,12 @@ def start_background_recorder() -> int:
     (and therefore "recording") stays held after this process closes its own
     copy.
 
+    The child's standard streams are redirected to ``/dev/null``.  This is
+    required for a detached process: otherwise it inherits the caller's stdout,
+    and a caller that reads that pipe to EOF (e.g. Hammerspoon's ``hs.execute``,
+    which is ``io.popen(...):read('*a')``) blocks until the recorder exits,
+    freezing the hotkey handler.
+
     Raises :class:`AlreadyRecordingError` if another recorder already holds the
     lease, making a duplicate start a no-op.
     """
@@ -258,6 +264,9 @@ def start_background_recorder() -> int:
             [os.path.abspath(sys.argv[0]), "--record-bg"],
             start_new_session=True,
             pass_fds=(lock.fileno(),),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         token = secrets.token_hex(16)
         lock.seek(0)
